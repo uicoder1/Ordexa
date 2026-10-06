@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Radar, ArrowRight, Loader2, Info, Building2, User as UserIcon, Mail, Lock, CheckCircle2 } from 'lucide-react';
+import { Radar, ArrowRight, Loader2, Info, Building2, User as UserIcon, Mail, Lock, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
   const { login, signup } = useAuth();
@@ -10,6 +10,7 @@ export const AuthModal: React.FC = () => {
   // Sign In fields
   const [signInEmail, setSignInEmail] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
 
   // Create Account fields (never preloaded)
   const [companyName, setCompanyName] = useState('');
@@ -17,6 +18,8 @@ export const AuthModal: React.FC = () => {
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // UI state
   const [error, setError] = useState<string | null>(null);
@@ -298,15 +301,24 @@ export const AuthModal: React.FC = () => {
                     <input
                       id="signup-password"
                       name="new-password"
-                      type="password"
+                      type={showSignUpPassword ? "text" : "password"}
                       required
                       autoComplete="new-password"
                       placeholder="••••••••"
                       value={signUpPassword}
                       onChange={e => setSignUpPassword(e.target.value)}
-                      className="input pl-10 text-[13px]"
-                      style={{ paddingLeft: '38px' }}
+                      className="input pl-10 pr-10 text-[13px]"
+                      style={{ paddingLeft: '38px', paddingRight: '38px' }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                      aria-label={showSignUpPassword ? "Hide password" : "Show password"}
+                      tabIndex={-1}
+                    >
+                      {showSignUpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -319,15 +331,24 @@ export const AuthModal: React.FC = () => {
                     <input
                       id="signup-confirm-password"
                       name="confirm-password"
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       required
                       autoComplete="new-password"
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
-                      className="input pl-10 text-[13px]"
-                      style={{ paddingLeft: '38px' }}
+                      className="input pl-10 pr-10 text-[13px]"
+                      style={{ paddingLeft: '38px', paddingRight: '38px' }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -388,15 +409,24 @@ export const AuthModal: React.FC = () => {
                     <input
                       id="signin-password"
                       name="password"
-                      type="password"
+                      type={showSignInPassword ? "text" : "password"}
                       required
                       autoComplete="current-password"
                       placeholder="••••••••"
                       value={signInPassword}
                       onChange={e => setSignInPassword(e.target.value)}
-                      className="input pl-10 text-[13px]"
-                      style={{ paddingLeft: '38px' }}
+                      className="input pl-10 pr-10 text-[13px]"
+                      style={{ paddingLeft: '38px', paddingRight: '38px' }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignInPassword(!showSignInPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                      aria-label={showSignInPassword ? "Hide password" : "Show password"}
+                      tabIndex={-1}
+                    >
+                      {showSignInPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
