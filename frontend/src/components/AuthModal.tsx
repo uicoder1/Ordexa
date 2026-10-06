@@ -8,12 +8,14 @@ export const AuthModal: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
 
   // Sign In fields
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [signInEmail, setSignInEmail] = useState('');
+  const [signInPassword, setSignInPassword] = useState('');
 
-  // Create Account fields
+  // Create Account fields (never preloaded)
   const [companyName, setCompanyName] = useState('');
   const [name, setName] = useState('');
+  const [signUpEmail, setSignUpEmail] = useState('');
+  const [signUpPassword, setSignUpPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // UI state
@@ -34,28 +36,28 @@ export const AuthModal: React.FC = () => {
         setError('Full name is required.');
         return false;
       }
-      if (!email.trim() || !email.includes('@') || !email.includes('.')) {
+      if (!signUpEmail.trim() || !signUpEmail.includes('@') || !signUpEmail.includes('.')) {
         setError('Please enter a valid email address.');
         return false;
       }
-      if (!password) {
+      if (!signUpPassword) {
         setError('Password is required.');
         return false;
       }
-      if (password.length < 6) {
+      if (signUpPassword.length < 6) {
         setError('Password must be at least 6 characters.');
         return false;
       }
-      if (password !== confirmPassword) {
+      if (signUpPassword !== confirmPassword) {
         setError('Passwords do not match.');
         return false;
       }
     } else {
-      if (!email.trim() || !email.includes('@')) {
+      if (!signInEmail.trim() || !signInEmail.includes('@')) {
         setError('Please enter a valid email address.');
         return false;
       }
-      if (!password) {
+      if (!signInPassword) {
         setError('Password is required.');
         return false;
       }
@@ -74,8 +76,8 @@ export const AuthModal: React.FC = () => {
     try {
       if (isSignUp) {
         const payload = {
-          email: email.trim().toLowerCase(),
-          password,
+          email: signUpEmail.trim().toLowerCase(),
+          password: signUpPassword,
           name: name.trim(),
           company_name: companyName.trim(),
         };
@@ -83,8 +85,8 @@ export const AuthModal: React.FC = () => {
         await signup(r.data.access_token, r.data.user, r.data.active_organization_id);
       } else {
         const payload = {
-          email: email.trim().toLowerCase(),
-          password,
+          email: signInEmail.trim().toLowerCase(),
+          password: signInPassword,
         };
         const r = await api.post('/auth/login', payload);
         await login(r.data.access_token, r.data.user, r.data.active_organization_id);
@@ -225,86 +227,106 @@ export const AuthModal: React.FC = () => {
               /* Create Account Fields */
               <>
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  <label htmlFor="signup-company" className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                     Company Name <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <Building2 className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Building2 className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
+                      id="signup-company"
+                      name="organization"
                       type="text"
                       required
+                      autoComplete="organization"
                       placeholder="e.g. Apex Retail Enterprises"
                       value={companyName}
                       onChange={e => setCompanyName(e.target.value)}
-                      className="input pl-9 text-[13px]"
+                      className="input pl-10 text-[13px]"
+                      style={{ paddingLeft: '38px' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  <label htmlFor="signup-name" className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                     Full Name <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <UserIcon className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <UserIcon className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
+                      id="signup-name"
+                      name="name"
                       type="text"
                       required
-                      placeholder="e.g. Anshu Gupta"
+                      autoComplete="name"
+                      placeholder="e.g. Alex Sharma"
                       value={name}
                       onChange={e => setName(e.target.value)}
-                      className="input pl-9 text-[13px]"
+                      className="input pl-10 text-[13px]"
+                      style={{ paddingLeft: '38px' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  <label htmlFor="signup-email" className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                     Email <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
+                      id="signup-email"
+                      name="email"
                       type="email"
                       required
-                      placeholder="anshu@example.com"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      className="input pl-9 text-[13px]"
+                      autoComplete="email"
+                      placeholder="you@company.com"
+                      value={signUpEmail}
+                      onChange={e => setSignUpEmail(e.target.value)}
+                      className="input pl-10 text-[13px]"
+                      style={{ paddingLeft: '38px' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  <label htmlFor="signup-password" className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                     Password <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
+                      id="signup-password"
+                      name="new-password"
                       type="password"
                       required
+                      autoComplete="new-password"
                       placeholder="••••••••"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      className="input pl-9 text-[13px]"
+                      value={signUpPassword}
+                      onChange={e => setSignUpPassword(e.target.value)}
+                      className="input pl-10 text-[13px]"
+                      style={{ paddingLeft: '38px' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  <label htmlFor="signup-confirm-password" className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                     Confirm Password <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
+                      id="signup-confirm-password"
+                      name="confirm-password"
                       type="password"
                       required
+                      autoComplete="new-password"
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
-                      className="input pl-9 text-[13px]"
+                      className="input pl-10 text-[13px]"
+                      style={{ paddingLeft: '38px' }}
                     />
                   </div>
                 </div>
@@ -328,25 +350,29 @@ export const AuthModal: React.FC = () => {
               /* Sign In Fields */
               <>
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  <label htmlFor="signin-email" className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                     Email
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
+                      id="signin-email"
+                      name="email"
                       type="email"
                       required
+                      autoComplete="email"
                       placeholder="seller@example.com"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      className="input pl-9 text-[13px]"
+                      value={signInEmail}
+                      onChange={e => setSignInEmail(e.target.value)}
+                      className="input pl-10 text-[13px]"
+                      style={{ paddingLeft: '38px' }}
                     />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-[13px] font-semibold text-gray-700">
+                    <label htmlFor="signin-password" className="block text-[13px] font-semibold text-gray-700">
                       Password
                     </label>
                     <button
@@ -358,14 +384,18 @@ export const AuthModal: React.FC = () => {
                     </button>
                   </div>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
+                      id="signin-password"
+                      name="password"
                       type="password"
                       required
+                      autoComplete="current-password"
                       placeholder="••••••••"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      className="input pl-9 text-[13px]"
+                      value={signInPassword}
+                      onChange={e => setSignInPassword(e.target.value)}
+                      className="input pl-10 text-[13px]"
+                      style={{ paddingLeft: '38px' }}
                     />
                   </div>
                 </div>
