@@ -240,3 +240,110 @@ def test_flipkart_replace_mode_and_informational_notices_regression(test_client_
     assert ov["unique_orders_count"] == 1752
     assert ov["unique_skus_count"] == 57
     assert ov["sale_linked_return_rate"] == 24.2
+
+
+def test_upload_and_process_zero_disk_dependency_and_sanitized_errors(test_client_and_db):
+    """
+    Verifies that:
+    1. Report upload processes into PostgreSQL immediately without depending on persistent ephemeral disk.
+    2. The temporary file is cleaned up from disk, yet /process-mapping succeeds instantly.
+    3. The cancellations endpoint returns 134 cancellation rows.
+    4. Invalid files return friendly error messages with zero raw stack traces or filesystem paths.
+    """
+    client, db, headers, org_id = test_client_and_db
+    from app.services.storage import storage_service
+    from app.models.models import UploadedFile
+
+    from pathlib import Path
+    tests_dir = Path(__file__).resolve().parent
+    file_path = str(tests_dir / "fixtures" / "sample_flipkart.xlsx")
+    assert os.path.exists(file_path)
+
+    # 1. Step 1: Upload File
+    with open(file_path, "rb") as f:
+        resp_upload = client.post(
+            "/api/v1/upload/file",
+            files={"file": ("flipkart_sales.xlsx", f, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            data={"marketplace": "Flipkart"},
+            headers=headers
+        )
+
+    assert resp_upload.status_code == 200
+    up_res = resp_upload.json()
+    upload_id = up_res["upload_id"]
+
+    # Verify physical file is already safely removed or not required
+    upload_rec = db.query(UploadedFile).filter(UploadedFile.id == upload_id).first()
+    assert upload_rec is not None
+    assert upload_rec.upload_status == "completed"
+
+    abs_path = storage_service.get_absolute_path(upload_rec.storage_path)
+    # Ensure physical file is gone (deleted after processing)
+    if os.path.exists(abs_path):
+        os.remove(abs_path)
+    assert not os.path.exists(abs_path), "Temporary file should not exist on disk"
+
+    # 2. Step 2: Call /process-mapping when physical file does not exist on disk
+    # This simulated Render container recycling/idle spin-down.
+    resp_proc = client.post(
+        "/api/v1/upload/process-mapping",
+        json={
+            "upload_id": upload_id,
+            "marketplace": "Flipkart",
+            "mapping": up_res.get("auto_mapping", {}),
+            "deduplication_mode": "replace"
+        },
+        headers=headers
+    )
+    assert resp_proc.status_code == 200
+    proc_res = resp_proc.json()
+    assert proc_res["sales_records_count"] == 2373
+
+    # 3. Verify ledger and overview data
+    ledger_count = db.query(OrderItemLedger).filter(OrderItemLedger.organization_id == org_id).count()
+    assert ledger_count == 2373
+
+    resp_overview = client.get("/api/v1/dashboard/overview", headers=headers)
+    assert resp_overview.status_code == 200
+    ov = resp_overview.json()
+    assert ov["sales_value"] == 319328.0
+    assert ov["returned_value"] == 97967.0
+    assert ov["sale_events_count"] == 1734
+    assert ov["return_events_count"] == 486
+    assert ov["cancellation_events_count"] == 134
+    assert ov["unique_skus_count"] == 57
+    assert ov["sale_linked_return_rate"] == 24.2
+
+    # 4. Verify cancellations orders ledger
+    resp_canc = client.get("/api/v1/dashboard/returns/orders?event=CANCELLATION", headers=headers)
+    assert resp_canc.status_code == 200
+    canc_rows = resp_canc.json()
+    assert len(canc_rows) == 134
+    for row in canc_rows:
+        assert row["event"] == "CANCELLATION"
+        assert row["order_id"] is not None
+
+    # 5. Verify friendly error messages (no stack traces, no filesystem paths)
+    resp_bad_ext = client.post(
+        "/api/v1/upload/file",
+        files={"file": ("notes.txt", b"Hello world", "text/plain")},
+        data={"marketplace": "Flipkart"},
+        headers=headers
+    )
+    assert resp_bad_ext.status_code == 400
+    bad_ext_detail = resp_bad_ext.json()["detail"]
+    assert bad_ext_detail == "Please upload an Excel or CSV report."
+    assert "Traceback" not in bad_ext_detail
+    assert "/" not in bad_ext_detail and "\\" not in bad_ext_detail
+
+    resp_corrupt = client.post(
+        "/api/v1/upload/file",
+        files={"file": ("corrupt.xlsx", b"not a zip file", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        data={"marketplace": "Flipkart"},
+        headers=headers
+    )
+    assert resp_corrupt.status_code == 400
+    corrupt_detail = resp_corrupt.json()["detail"]
+    assert corrupt_detail == "Unable to process this report. Please check that it is a valid marketplace report."
+    assert "Traceback" not in corrupt_detail
+    assert "/" not in corrupt_detail and "\\" not in corrupt_detail

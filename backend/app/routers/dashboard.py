@@ -238,6 +238,7 @@ def get_returns_summary(
         "sale_linked_return_rate": sale_linked_return_rate,
         "returned_value": returned_value,
         "return_cancellations": len(return_cancel_events),
+        "cancellations": len(cancellation_events),
 
         # Legacy backward-compatibility
         "return_events_count": len(return_events),
@@ -374,7 +375,7 @@ def get_returns_orders_ledger(
                 }
 
     target_event = (event or "RETURN").strip().upper()
-    if target_event not in ["RETURN", "RETURN_CANCELLATION"]:
+    if target_event not in ["RETURN", "RETURN_CANCELLATION", "CANCELLATION"]:
         target_event = "RETURN"
 
     candidate_items = [i for i in items if i.event_subtype == target_event]
@@ -416,6 +417,8 @@ def get_returns_orders_ledger(
         dt_str = i.order_date.strftime("%d %b %Y") if i.order_date else "—"
         state = (i.customer_delivery_state or i.customer_billing_state or i.shipped_from_state or "Unknown").strip()
 
+        event_label = "RETURN" if i.event_subtype == "RETURN" else ("CANCELLATION" if i.event_subtype == "CANCELLATION" else "RETURN CANCELLATION")
+
         rows.append({
             "order_id": i.order_id or "—",
             "order_item_id": i.order_item_id or "—",
@@ -427,7 +430,7 @@ def get_returns_orders_ledger(
             "quantity": i.quantity or 1,
             "return_value": round(i.invoice_amount or 0.0, 2),
             "customer_delivery_state": state,
-            "event": "RETURN" if i.event_subtype == "RETURN" else "RETURN CANCELLATION",
+            "event": event_label,
             "event_subtype": i.event_subtype,
             "has_sale_event": has_sale,
             "sale_date": sale_info.get("sale_date"),

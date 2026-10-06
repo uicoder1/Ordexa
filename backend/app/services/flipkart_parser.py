@@ -117,55 +117,55 @@ class FlipkartParserService:
         }
 
         if file_type.lower() in ["xlsx", "xls"]:
-            excel_file = pd.ExcelFile(file_path)
-            info["sheets"] = excel_file.sheet_names
+            with pd.ExcelFile(file_path) as excel_file:
+                info["sheets"] = excel_file.sheet_names
 
-            # Ignore instructions or help sheets
-            valid_sheets = [s for s in excel_file.sheet_names if s.lower() not in ["help", "instructions", "readme"]]
+                # Ignore instructions or help sheets
+                valid_sheets = [s for s in excel_file.sheet_names if s.lower() not in ["help", "instructions", "readme"]]
 
-            for sname in valid_sheets:
-                df = pd.read_excel(excel_file, sheet_name=sname)
-                cols_lower = [str(c).lower().strip() for c in df.columns]
+                for sname in valid_sheets:
+                    df = pd.read_excel(excel_file, sheet_name=sname)
+                    cols_lower = [str(c).lower().strip() for c in df.columns]
 
-                if "document type" in cols_lower or "credit note id" in cols_lower or "credit note id/ debit note id" in cols_lower or "cash back" in sname.lower() or "cashback" in sname.lower():
-                    info["has_cashback_report"] = True
-                    if "Cash Back Report" not in info["detected_reports"]:
-                        info["detected_reports"].append("Cash Back Report")
-                    info["total_rows"] += len(df)
+                    if "document type" in cols_lower or "credit note id" in cols_lower or "credit note id/ debit note id" in cols_lower or "cash back" in sname.lower() or "cashback" in sname.lower():
+                        info["has_cashback_report"] = True
+                        if "Cash Back Report" not in info["detected_reports"]:
+                            info["detected_reports"].append("Cash Back Report")
+                        info["total_rows"] += len(df)
 
-                elif "event sub type" in cols_lower or "event type" in cols_lower or "sales" in sname.lower() or "order item id" in cols_lower:
-                    info["has_sales_report"] = True
-                    if "Sales Report" not in info["detected_reports"]:
-                        info["detected_reports"].append("Sales Report")
-                    
-                    # Quick stats
-                    if "order item id" in cols_lower:
-                        idx_col = [c for c in df.columns if str(c).lower().strip() == "order item id"][0]
-                        info["orders_count"] = df[idx_col].nunique()
-                    
-                    if "sku" in cols_lower:
-                        sku_col = [c for c in df.columns if str(c).lower().strip() == "sku"][0]
-                        clean_skus = df[sku_col].dropna().astype(str).apply(clean_sku)
-                        info["skus_count"] = clean_skus[clean_skus != ""].nunique()
+                    elif "event sub type" in cols_lower or "event type" in cols_lower or "sales" in sname.lower() or "order item id" in cols_lower:
+                        info["has_sales_report"] = True
+                        if "Sales Report" not in info["detected_reports"]:
+                            info["detected_reports"].append("Sales Report")
 
-                    if "event sub type" in cols_lower:
-                        evt_col = [c for c in df.columns if str(c).lower().strip() == "event sub type"][0]
-                        subtypes = df[evt_col].astype(str).str.lower()
-                        info["sales_count"] = int((subtypes == "sale").sum())
-                        info["returns_count"] = int((subtypes == "return").sum())
-                        info["cancellations_count"] = int((subtypes == "cancellation").sum())
-                        info["return_cancellations_count"] = int((subtypes == "return cancellation").sum())
+                        # Quick stats
+                        if "order item id" in cols_lower:
+                            idx_col = [c for c in df.columns if str(c).lower().strip() == "order item id"][0]
+                            info["orders_count"] = df[idx_col].nunique()
 
-                    if any("delivery state" in c for c in cols_lower):
-                        info["customer_states_detected"] = True
+                        if "sku" in cols_lower:
+                            sku_col = [c for c in df.columns if str(c).lower().strip() == "sku"][0]
+                            clean_skus = df[sku_col].dropna().astype(str).apply(clean_sku)
+                            info["skus_count"] = clean_skus[clean_skus != ""].nunique()
 
-                    info["total_rows"] += len(df)
+                        if "event sub type" in cols_lower:
+                            evt_col = [c for c in df.columns if str(c).lower().strip() == "event sub type"][0]
+                            subtypes = df[evt_col].astype(str).str.lower()
+                            info["sales_count"] = int((subtypes == "sale").sum())
+                            info["returns_count"] = int((subtypes == "return").sum())
+                            info["cancellations_count"] = int((subtypes == "cancellation").sum())
+                            info["return_cancellations_count"] = int((subtypes == "return cancellation").sum())
 
-                elif "settlement" in cols_lower or "payout" in cols_lower or "bank transfer" in cols_lower:
-                    info["has_settlement_report"] = True
-                    if "Settlement Report" not in info["detected_reports"]:
-                        info["detected_reports"].append("Settlement Report")
-                    info["total_rows"] += len(df)
+                        if any("delivery state" in c for c in cols_lower):
+                            info["customer_states_detected"] = True
+
+                        info["total_rows"] += len(df)
+
+                    elif "settlement" in cols_lower or "payout" in cols_lower or "bank transfer" in cols_lower:
+                        info["has_settlement_report"] = True
+                        if "Settlement Report" not in info["detected_reports"]:
+                            info["detected_reports"].append("Settlement Report")
+                        info["total_rows"] += len(df)
 
         else:
             # Single CSV file
@@ -210,26 +210,26 @@ class FlipkartParserService:
         cashback_records = []
 
         if file_type.lower() in ["xlsx", "xls"]:
-            excel_file = pd.ExcelFile(file_path)
-            sheet_names = excel_file.sheet_names
+            with pd.ExcelFile(file_path) as excel_file:
+                sheet_names = excel_file.sheet_names
 
-            # Process Sales Report sheet
-            sales_sheets = [s for s in sheet_names if "sales" in s.lower()]
-            if sales_sheets:
-                df_sales = pd.read_excel(excel_file, sheet_name=sales_sheets[0])
-                sales_records = FlipkartParserService._process_sales_dataframe(df_sales)
-            else:
-                # Try first valid non-help sheet
-                non_help = [s for s in sheet_names if s.lower() not in ["help", "instructions", "readme"]]
-                if non_help:
-                    df_sales = pd.read_excel(excel_file, sheet_name=non_help[0])
+                # Process Sales Report sheet
+                sales_sheets = [s for s in sheet_names if "sales" in s.lower()]
+                if sales_sheets:
+                    df_sales = pd.read_excel(excel_file, sheet_name=sales_sheets[0])
                     sales_records = FlipkartParserService._process_sales_dataframe(df_sales)
+                else:
+                    # Try first valid non-help sheet
+                    non_help = [s for s in sheet_names if s.lower() not in ["help", "instructions", "readme"]]
+                    if non_help:
+                        df_sales = pd.read_excel(excel_file, sheet_name=non_help[0])
+                        sales_records = FlipkartParserService._process_sales_dataframe(df_sales)
 
-            # Process Cash Back Report sheet
-            cb_sheets = [s for s in sheet_names if "cash back" in s.lower() or "cashback" in s.lower()]
-            if cb_sheets:
-                df_cb = pd.read_excel(excel_file, sheet_name=cb_sheets[0])
-                cashback_records = FlipkartParserService._process_cashback_dataframe(df_cb)
+                # Process Cash Back Report sheet
+                cb_sheets = [s for s in sheet_names if "cash back" in s.lower() or "cashback" in s.lower()]
+                if cb_sheets:
+                    df_cb = pd.read_excel(excel_file, sheet_name=cb_sheets[0])
+                    cashback_records = FlipkartParserService._process_cashback_dataframe(df_cb)
 
         else:
             try:

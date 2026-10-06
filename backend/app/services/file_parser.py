@@ -47,7 +47,8 @@ class FileParserService:
         """
         try:
             if file_type.lower() in ["xlsx", "xls"]:
-                df = pd.read_excel(file_path, nrows=100)
+                with open(file_path, "rb") as f:
+                    df = pd.read_excel(f, nrows=100)
             else:
                 # Try UTF-8, then latin1 encoding
                 try:
@@ -96,7 +97,8 @@ class FileParserService:
         Loads the entire spreadsheet and maps columns into normalized internal dictionaries.
         """
         if file_type.lower() in ["xlsx", "xls"]:
-            df = pd.read_excel(file_path)
+            with open(file_path, "rb") as f:
+                df = pd.read_excel(f)
         else:
             try:
                 df = pd.read_csv(file_path)

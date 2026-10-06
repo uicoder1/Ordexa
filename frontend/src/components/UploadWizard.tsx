@@ -28,7 +28,7 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onClose, onSuccess }
     e.preventDefault(); setIsDrag(false);
     const f = e.dataTransfer.files?.[0];
     if (f && ['csv','xlsx','xls'].includes(f.name.split('.').pop()?.toLowerCase() || '')) { setFile(f); setError(null); }
-    else setError('Only .xlsx, .xls, and .csv are supported.');
+    else setError('Please upload an Excel or CSV report.');
   }, []);
 
   const handleStep1 = async (e: React.FormEvent) => {
@@ -41,22 +41,22 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onClose, onSuccess }
     try {
       const res = await api.post('/upload/file', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setUploadData(res.data); setStep(2);
-    } catch (err: any) { setError(err.response?.data?.detail || 'Failed to parse file.'); }
+    } catch (err: any) { setError(err.response?.data?.detail || "We couldn't analyze this report. Please try again."); }
     finally { setUploading(false); }
   };
 
   const handleProcess = async () => {
     if (!uploadData) return;
     setProcessing(true); setStep(3); setError(null);
-    const msgs = ['Reading workbook sheets...','Building ledger...','Calculating returns...','Syncing catalog...','Finalizing...'];
+    const msgs = ['Finalizing analysis...','Syncing metrics...','Opening report...'];
     let i = 0;
-    const iv = setInterval(() => { if (i < msgs.length - 1) setProgressMsg(msgs[++i]); else clearInterval(iv); }, 500);
+    const iv = setInterval(() => { if (i < msgs.length - 1) setProgressMsg(msgs[++i]); else clearInterval(iv); }, 300);
     try {
       await api.post('/upload/process-mapping', { upload_id: uploadData.upload_id, marketplace: marketplace === 'Auto-Detect' ? 'Flipkart' : marketplace, mapping: uploadData.auto_mapping || {}, deduplication_mode: 'replace' });
-      clearInterval(iv); setProgressMsg('Import complete!');
-      setTimeout(() => { setProcessing(false); onSuccess(); onClose(); }, 600);
+      clearInterval(iv); setProgressMsg('Report ready!');
+      setTimeout(() => { setProcessing(false); onSuccess(); onClose(); }, 400);
     } catch (err: any) {
-      clearInterval(iv); setError(err.response?.data?.detail || 'Processing failed.'); setProcessing(false); setStep(2);
+      clearInterval(iv); setError(err.response?.data?.detail || "We couldn't analyze this report. Please try again."); setProcessing(false); setStep(2);
     }
   };
 
@@ -119,7 +119,7 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onClose, onSuccess }
 
               <div className="flex justify-end">
                 <button type="submit" disabled={uploading || !file} className="btn-primary">
-                  {uploading ? <><Loader2 className="w-4 h-4 animate-spin" />Analyzing...</> : <><Sparkles className="w-4 h-4" />Detect & Preview</>}
+                  {uploading ? <><Loader2 className="w-4 h-4 animate-spin" />Analyzing your report...</> : <><Sparkles className="w-4 h-4" />Analyze Report</>}
                 </button>
               </div>
             </form>
@@ -130,7 +130,7 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onClose, onSuccess }
             <div className="space-y-4 animate-slideUp">
               <div className="card-flat p-4 space-y-3">
                 <div className="flex justify-between items-center pb-3 border-b border-gray-100">
-                  <span className="text-[13px] font-bold text-gray-900">Report Analysed</span>
+                  <span className="text-[14px] font-bold text-gray-900">Your report is ready</span>
                   <span className="badge badge-indigo text-[11px]">{uploadData.filename}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -158,7 +158,7 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onClose, onSuccess }
               </div>
               <div className="flex justify-between">
                 <button onClick={() => setStep(1)} className="btn-secondary">Back</button>
-                <button onClick={handleProcess} className="btn-primary">Import Data <ArrowRight className="w-4 h-4" /></button>
+                <button onClick={handleProcess} className="btn-primary">View Report <ArrowRight className="w-4 h-4" /></button>
               </div>
             </div>
           )}
@@ -169,7 +169,7 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onClose, onSuccess }
               <div className="w-14 h-14 rounded-2xl mx-auto bg-indigo-50 flex items-center justify-center">
                 <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
               </div>
-              <h4 className="text-[16px] font-bold text-gray-900">Importing Report...</h4>
+              <h4 className="text-[16px] font-bold text-gray-900">Opening Report...</h4>
               <p className="text-[13px] text-indigo-500 font-medium animate-pulse">{progressMsg}</p>
             </div>
           )}

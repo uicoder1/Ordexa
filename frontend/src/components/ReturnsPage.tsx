@@ -57,7 +57,7 @@ export const ReturnsPage: React.FC<Props> = ({ onSelectProduct }) => {
 
   // Filters for orders table
   const [search, setSearch] = useState('');
-  const [eventFilter, setEventFilter] = useState<'RETURN' | 'RETURN_CANCELLATION'>('RETURN');
+  const [eventFilter, setEventFilter] = useState<'RETURN' | 'CANCELLATION' | 'RETURN_CANCELLATION'>('RETURN');
   const [skuFilter, setSkuFilter] = useState('');
   const [orderTypeFilter, setOrderTypeFilter] = useState('ALL');
   const [stateFilter, setStateFilter] = useState('ALL');
@@ -169,6 +169,7 @@ export const ReturnsPage: React.FC<Props> = ({ onSelectProduct }) => {
   const saleLinkedReturnRate = summary?.sale_linked_return_rate ?? 0;
   const returnedValue = summary?.returned_value ?? 0;
   const returnCancellations = summary?.return_cancellations ?? summary?.return_cancellation_events_count ?? 0;
+  const cancellations = summary?.cancellations ?? summary?.cancellation_events_count ?? 0;
 
   return (
     <div className="space-y-6 animate-fadeInUp pb-12">
@@ -482,6 +483,16 @@ export const ReturnsPage: React.FC<Props> = ({ onSelectProduct }) => {
               Return ({totalReturnEvents})
             </button>
             <button
+              onClick={() => setEventFilter('CANCELLATION')}
+              className={`px-3 py-1 text-[12px] font-semibold rounded-lg transition-all ${
+                eventFilter === 'CANCELLATION'
+                  ? 'bg-white text-amber-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              Cancellation ({cancellations})
+            </button>
+            <button
               onClick={() => setEventFilter('RETURN_CANCELLATION')}
               className={`px-3 py-1 text-[12px] font-semibold rounded-lg transition-all ${
                 eventFilter === 'RETURN_CANCELLATION'
@@ -580,7 +591,7 @@ export const ReturnsPage: React.FC<Props> = ({ onSelectProduct }) => {
           <div className="flex justify-center py-16"><RefreshCw className="w-6 h-6 animate-spin text-indigo-500" /></div>
         ) : orders.length === 0 ? (
           <div className="py-16 text-center text-[13px] text-gray-400">
-            No return orders match your selected filters.
+            {eventFilter === 'CANCELLATION' ? 'No cancellation orders match your selected filters.' : 'No return orders match your selected filters.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -591,10 +602,10 @@ export const ReturnsPage: React.FC<Props> = ({ onSelectProduct }) => {
                   <th>Order Item ID</th>
                   <th>SKU</th>
                   <th>Product Name</th>
-                  <th>Return Date</th>
+                  <th>{eventFilter === 'CANCELLATION' ? 'Cancel Date' : 'Return Date'}</th>
                   <th>Order Type</th>
                   <th className="text-center">Qty</th>
-                  <th className="text-right">Return Value (₹)</th>
+                  <th className="text-right">{eventFilter === 'CANCELLATION' ? 'Invoice Amount (₹)' : 'Return Value (₹)'}</th>
                   <th>Delivery State</th>
                   <th className="text-center">Event</th>
                   <th className="w-16 text-center">Action</th>

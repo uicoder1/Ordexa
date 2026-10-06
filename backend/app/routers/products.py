@@ -218,7 +218,7 @@ def bulk_upload_costs(
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to process cost file: {str(e)}")
+        raise HTTPException(status_code=400, detail="Failed to process cost file. Please check file format.")
 
 @router.post("/update-sku-cost")
 def update_sku_cost(
