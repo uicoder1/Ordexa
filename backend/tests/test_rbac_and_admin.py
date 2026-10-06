@@ -126,3 +126,48 @@ def test_platform_admin_security_enforcement(isolated_db):
     me_admin = client.get("/api/v1/auth/me", headers=headers_admin)
     assert me_admin.status_code == 200
     assert me_admin.json()["is_platform_admin"] is True
+
+
+def test_reset_user_password_preserves_platform_admin(isolated_db):
+    from scripts.reset_user_password import reset_user_password
+
+    db, client = isolated_db
+    target_email = "anshugupta9124@gmail.com"
+
+    # Create admin user
+    admin_user = User(
+        id="u-admin-pwd-test",
+        email=target_email,
+        name="Anshu Gupta",
+        hashed_password="$argon2id$v=19$m=65536,t=3,p=4$oldhash$salt",
+        is_platform_admin=True
+    )
+    db.add(admin_user)
+    db.commit()
+
+    # Reset password
+    new_password = "BrandNewSuperSecurePassword999!"
+    res = reset_user_password(db, email=target_email, new_password=new_password)
+
+    assert res["user_id"] == "u-admin-pwd-test"
+    assert res["is_platform_admin"] is True
+    assert res["email"] == target_email
+
+    # Verify user record in database
+    db_user = db.query(User).filter(User.email == target_email).first()
+    assert db_user.is_platform_admin is True
+    assert db_user.hashed_password.startswith("$argon2id$")
+    assert new_password not in db_user.hashed_password
+    assert db_user.name == "Anshu Gupta"
+
+    # Authenticate via /api/v1/auth/login using new password
+    login_resp = client.post(
+        "/api/v1/auth/login",
+        json={"email": target_email, "password": new_password}
+    )
+    assert login_resp.status_code == 200
+    login_data = login_resp.json()
+    assert login_data["user"]["is_platform_admin"] is True
+    assert login_data["user"]["email"] == target_email
+    assert "password" not in login_data["user"]
+    assert "hashed_password" not in login_data["user"]
