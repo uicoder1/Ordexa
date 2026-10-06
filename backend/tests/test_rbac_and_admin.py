@@ -108,3 +108,21 @@ def test_platform_admin_security_enforcement(isolated_db):
     resp_users = client.get("/api/v1/admin/users", headers=headers_admin)
     assert resp_users.status_code == 200
     assert len(resp_users.json()) == 2
+
+    # 3. User details endpoint
+    assert client.get(f"/api/v1/admin/users/{regular_user.id}", headers=headers_regular).status_code == 403
+    resp_detail = client.get(f"/api/v1/admin/users/{regular_user.id}", headers=headers_admin)
+    assert resp_detail.status_code == 200
+    detail_data = resp_detail.json()
+    assert detail_data["email"] == "regular@example.com"
+    assert "hashed_password" not in detail_data
+    assert "password" not in detail_data
+
+    # 4. Verify auth/me returns is_platform_admin correctly
+    me_reg = client.get("/api/v1/auth/me", headers=headers_regular)
+    assert me_reg.status_code == 200
+    assert me_reg.json()["is_platform_admin"] is False
+
+    me_admin = client.get("/api/v1/auth/me", headers=headers_admin)
+    assert me_admin.status_code == 200
+    assert me_admin.json()["is_platform_admin"] is True

@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   avatar_url?: string;
+  is_platform_admin?: boolean;
   created_at: string;
 }
 
@@ -145,4 +146,96 @@ export interface SubscriptionStatus {
     uploads_used: number;
     max_uploads: number;
   };
+}
+
+export interface PlatformOverview {
+  platform_name: string;
+  total_organizations: number;
+  total_users: number;
+  total_uploads: number;
+  total_audit_events: number;
+  timestamp: string;
+}
+
+export interface PlatformOrganization {
+  id: string;
+  name: string;
+  owner_email: string;
+  owner_id: string;
+  sales_channels: string;
+  member_count: number;
+  upload_count: number;
+  created_at: string;
+}
+
+export interface PlatformUser {
+  id: string;
+  email: string;
+  name: string;
+  organization_name?: string;
+  organization_role?: string;
+  is_platform_admin: boolean;
+  created_at: string;
+  last_login_at?: string | null;
+}
+
+export interface PlatformUpload {
+  id: string;
+  organization_id: string;
+  filename: string;
+  marketplace: string;
+  file_type: string;
+  file_size?: number;
+  upload_status: string;
+  rows_processed: number;
+  rows_failed: number;
+  uploaded_at: string;
+  error_message?: string | null;
+}
+
+export interface PlatformAuditLog {
+  id: string;
+  organization_id?: string | null;
+  user_id?: string | null;
+  action: string;
+  resource_type: string;
+  resource_id?: string | null;
+  metadata?: Record<string, any> | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+}
+
+export interface PlatformUserDetails extends PlatformUser {
+  organizations: Array<{
+    organization_id: string;
+    organization_name: string;
+    role: string;
+    joined_at: string;
+  }>;
+}
+
+export interface PlatformOrganizationDetails extends PlatformOrganization {
+  product_count: number;
+  members: Array<{
+    user_id: string;
+    name: string;
+    email: string;
+    role: string;
+    joined_at: string;
+  }>;
+  recent_uploads: Array<{
+    id: string;
+    filename: string;
+    marketplace: string;
+    upload_status: string;
+    rows_processed: number;
+    uploaded_at: string;
+  }>;
+  recent_activity: Array<{
+    id: string;
+    action: string;
+    resource_type: string;
+    created_at: string;
+  }>;
 }

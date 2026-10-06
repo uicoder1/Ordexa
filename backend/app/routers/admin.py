@@ -74,17 +74,30 @@ def list_platform_users(
     Lists all platform registered users, their registration dates, and last login timestamps.
     """
     users = db.query(User).order_by(User.created_at.desc()).limit(limit).all()
-    return [
-        {
+    results = []
+    for u in users:
+        membership = db.query(OrganizationMember).filter(
+            OrganizationMember.user_id == u.id
+        ).first()
+        org_name = "None"
+        org_role = "None"
+        if membership:
+            org = db.query(Organization).filter(Organization.id == membership.organization_id).first()
+            if org:
+                org_name = org.name
+            org_role = membership.role or "member"
+
+        results.append({
             "id": u.id,
             "email": u.email,
             "name": u.name,
+            "organization_name": org_name,
+            "organization_role": org_role,
             "is_platform_admin": bool(u.is_platform_admin),
             "created_at": u.created_at,
             "last_login_at": u.last_login_at
-        }
-        for u in users
-    ]
+        })
+    return results
 
 @router.get("/uploads")
 def list_platform_upload_activity(
@@ -173,4 +186,129 @@ def toggle_user_platform_admin(
         "message": f"User '{target_user.email}' platform admin status set to {target_user.is_platform_admin}.",
         "user_id": target_user.id,
         "is_platform_admin": target_user.is_platform_admin
+    }
+
+
+@router.get("/users/{user_id}")
+def get_platform_user_details(
+    user_id: str,
+    current_admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Detailed platform view of a specific user and their organization memberships.
+    """
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found."
+        )
+
+    memberships = db.query(OrganizationMember).filter(
+        OrganizationMember.user_id == target_user.id
+    ).all()
+
+    orgs = []
+    for m in memberships:
+        org = db.query(Organization).filter(Organization.id == m.organization_id).first()
+        if org:
+            orgs.append({
+                "organization_id": org.id,
+                "organization_name": org.name,
+                "role": m.role or "member",
+                "joined_at": m.created_at
+            })
+
+    return {
+        "id": target_user.id,
+        "email": target_user.email,
+        "name": target_user.name,
+        "is_platform_admin": bool(target_user.is_platform_admin),
+        "created_at": target_user.created_at,
+        "last_login_at": target_user.last_login_at,
+        "organizations": orgs
+    }
+
+
+@router.get("/organizations/{org_id}")
+def get_platform_organization_details(
+    org_id: str,
+    current_admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Detailed platform view of an organization, its members, upload metrics, and recent activity.
+    """
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found."
+        )
+
+    owner = db.query(User).filter(User.id == org.owner_id).first()
+
+    from app.models.models import Product
+    upload_count = db.query(func.count(UploadedFile.id)).filter(
+        UploadedFile.organization_id == org.id
+    ).scalar() or 0
+    product_count = db.query(func.count(Product.id)).filter(
+        Product.organization_id == org.id
+    ).scalar() or 0
+
+    memberships = db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == org.id
+    ).all()
+    members = []
+    for m in memberships:
+        u = db.query(User).filter(User.id == m.user_id).first()
+        if u:
+            members.append({
+                "user_id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "role": m.role or "member",
+                "joined_at": m.created_at
+            })
+
+    recent_uploads = db.query(UploadedFile).filter(
+        UploadedFile.organization_id == org.id
+    ).order_by(UploadedFile.uploaded_at.desc()).limit(10).all()
+
+    recent_logs = db.query(AuditLog).filter(
+        AuditLog.organization_id == org.id
+    ).order_by(AuditLog.created_at.desc()).limit(10).all()
+
+    return {
+        "id": org.id,
+        "name": org.name,
+        "owner_id": org.owner_id,
+        "owner_email": owner.email if owner else "Unknown",
+        "sales_channels": org.sales_channels,
+        "created_at": org.created_at,
+        "member_count": len(members),
+        "upload_count": upload_count,
+        "product_count": product_count,
+        "members": members,
+        "recent_uploads": [
+            {
+                "id": up.id,
+                "filename": up.filename,
+                "marketplace": up.marketplace,
+                "upload_status": up.upload_status,
+                "rows_processed": up.rows_processed,
+                "uploaded_at": up.uploaded_at
+            }
+            for up in recent_uploads
+        ],
+        "recent_activity": [
+            {
+                "id": l.id,
+                "action": l.action,
+                "resource_type": l.resource_type,
+                "created_at": l.created_at
+            }
+            for l in recent_logs
+        ]
     }

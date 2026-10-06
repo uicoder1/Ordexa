@@ -14,6 +14,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: str
     created_at: datetime
+    is_platform_admin: bool = False
     class Config:
         from_attributes = True
 

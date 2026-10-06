@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Radar, Plus, LogOut, ChevronDown, Building2, ShieldCheck, LayoutDashboard, Package, RotateCcw, DollarSign, History, FileBarChart2, Settings } from 'lucide-react';
+import { Radar, Plus, LogOut, ChevronDown, Building2, ShieldCheck, LayoutDashboard, Package, RotateCcw, DollarSign, History, FileBarChart2, Settings, Shield } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: string;
@@ -21,7 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenU
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  const navItems = [
+  const baseNavItems = [
     { id: 'overview',   label: 'Overview',   icon: LayoutDashboard },
     { id: 'products',   label: 'Products',   icon: Package },
     { id: 'returns',    label: 'Returns',    icon: RotateCcw },
@@ -30,6 +30,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenU
     { id: 'reports',    label: 'Reports',    icon: FileBarChart2 },
     { id: 'settings',  label: 'Settings',   icon: Settings },
   ];
+
+  const navItems = user?.is_platform_admin
+    ? [...baseNavItems, { id: 'admin', label: 'Admin', icon: Shield }]
+    : baseNavItems;
 
   const channels = ['All', 'Flipkart', 'Amazon', 'Meesho', 'Shopify'];
 
@@ -98,6 +102,20 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenU
               <span>Import Data</span>
             </button>
             <div className="flex items-center gap-2 pl-3 border-l border-gray-100">
+              {user?.is_platform_admin && (
+                <button
+                  onClick={() => setActiveTab('admin')}
+                  title="Platform Admin Console"
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border flex items-center gap-1 transition-all ${
+                    activeTab === 'admin'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                      : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                  }`}
+                >
+                  <Shield className="w-3 h-3" />
+                  <span>Admin</span>
+                </button>
+              )}
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold" style={{ background: '#eef2ff', color: '#4f46e5' }}>
                 {user?.name?.charAt(0) || 'U'}
               </div>

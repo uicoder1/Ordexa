@@ -11,6 +11,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { UploadWizard } from './components/UploadWizard';
 import { AuthModal } from './components/AuthModal';
 import { SKUDetailPage } from './components/SKUDetailPage';
+import { AdminPage } from './components/AdminPage';
 import { useState } from 'react';
 import { Radar, Download, FileBarChart2 } from 'lucide-react';
 
@@ -74,6 +75,7 @@ const DashboardContent: React.FC = () => {
             {activeTab === 'financials' && <FinancialsPage onOpenUpload={() => setShowUpload(true)} />}
             {activeTab === 'imports'    && <ImportHistoryPage onRefreshMetrics={() => {}} />}
             {activeTab === 'settings'   && <SettingsPage />}
+            {activeTab === 'admin'      && <AdminPage />}
             {activeTab === 'reports'    && (
               <div className="card p-10 max-w-lg mx-auto text-center space-y-4">
                 <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center bg-indigo-50">
