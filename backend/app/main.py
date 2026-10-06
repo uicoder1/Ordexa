@@ -15,7 +15,10 @@ app = FastAPI(
 
 # CORS configuration: strict parameterized origins in production, localhost in development
 if settings.ENVIRONMENT == "production":
-    allowed_origins = [settings.FRONTEND_URL.rstrip("/")] if settings.FRONTEND_URL else []
+    if settings.FRONTEND_URL:
+        allowed_origins = [u.strip().rstrip("/") for u in settings.FRONTEND_URL.split(",") if u.strip()]
+    else:
+        allowed_origins = []
 else:
     allowed_origins = [
         "http://localhost:5173",
