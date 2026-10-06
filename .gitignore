@@ -1,0 +1,56 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+backend/profitpilot.db
+backend/profitpilot.db.bak
+profitpilot.db
+
+# Customer / marketplace data
+uploads/
+storage/
+media/
+data/
+*.xlsx
+*.xls
+*.csv
+!backend/tests/fixtures/*.xlsx
+
+# Logs
+*.log
+logs/
+
+# Scratch
+scratch/
+
+# Python
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
