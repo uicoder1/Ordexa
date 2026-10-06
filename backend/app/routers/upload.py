@@ -217,8 +217,8 @@ def process_mapped_file(
 
         # Wipe old ledger data if replace mode
         if req.deduplication_mode == "replace":
-            db.query(OrderItemLedger).filter(OrderItemLedger.organization_id == current_org.id).delete()
-            db.query(CashBackLedger).filter(CashBackLedger.organization_id == current_org.id).delete()
+            db.query(OrderItemLedger).filter(OrderItemLedger.organization_id == current_org.id).delete(synchronize_session=False)
+            db.query(CashBackLedger).filter(CashBackLedger.organization_id == current_org.id).delete(synchronize_session=False)
             db.commit()
 
         processed_sales = 0

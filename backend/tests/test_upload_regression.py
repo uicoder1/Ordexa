@@ -148,3 +148,95 @@ def test_real_flipkart_upload_and_metrics_regression(test_client_and_db):
     assert resp_detail.status_code == 200
     detail = resp_detail.json()
     assert detail["sku"] == "L-ORI-JHU-SL"
+
+
+def test_flipkart_replace_mode_and_informational_notices_regression(test_client_and_db):
+    client, db, headers, org_id = test_client_and_db
+
+    from pathlib import Path
+    tests_dir = Path(__file__).resolve().parent
+    file_path = str(tests_dir / "fixtures" / "sample_flipkart.xlsx")
+    assert os.path.exists(file_path)
+
+    # 1. Step 1: Upload File and verify informational notices are present and NOT treated as errors
+    with open(file_path, "rb") as f:
+        resp_upload1 = client.post(
+            "/api/v1/upload/file",
+            files={"file": ("flipkart_sales.xlsx", f, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            data={"marketplace": "Flipkart"},
+            headers=headers
+        )
+
+    assert resp_upload1.status_code == 200
+    up1 = resp_upload1.json()
+    assert up1["total_rows_detected"] == 2842
+    assert up1["detection_summary"]["orders_count"] == 1766
+    assert up1["detection_summary"]["skus_count"] == 57
+    assert up1["detection_summary"]["sales_detected"] is True
+    assert up1["detection_summary"]["returns_detected"] is True
+    assert up1["detection_summary"]["cancellations_detected"] is True
+
+    # Informational notices must be present
+    notices = up1["detection_summary"]["missing_warnings"]
+    assert "COGS" in notices
+    assert "Settlement" in notices
+    assert "RTO status" in notices
+
+    # 2. Step 2: First import in replace mode
+    resp_proc1 = client.post(
+        "/api/v1/upload/process-mapping",
+        json={
+            "upload_id": up1["upload_id"],
+            "marketplace": "Flipkart",
+            "mapping": up1.get("auto_mapping", {}),
+            "deduplication_mode": "replace"
+        },
+        headers=headers
+    )
+    assert resp_proc1.status_code == 200
+    assert resp_proc1.json()["sales_records_count"] == 2373
+
+    # 3. Step 3: Re-upload and import a second time in replace mode (simulating replacing report)
+    # This must NOT fail with ObjectDeletedError or "Processing failed"
+    with open(file_path, "rb") as f:
+        resp_upload2 = client.post(
+            "/api/v1/upload/file",
+            files={"file": ("flipkart_sales_replace.xlsx", f, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            data={"marketplace": "Flipkart"},
+            headers=headers
+        )
+    assert resp_upload2.status_code == 200
+    up2 = resp_upload2.json()
+
+    resp_proc2 = client.post(
+        "/api/v1/upload/process-mapping",
+        json={
+            "upload_id": up2["upload_id"],
+            "marketplace": "Flipkart",
+            "mapping": up2.get("auto_mapping", {}),
+            "deduplication_mode": "replace"
+        },
+        headers=headers
+    )
+    assert resp_proc2.status_code == 200, f"Process mapping failed: {resp_proc2.text}"
+    assert resp_proc2.json()["sales_records_count"] == 2373
+
+    # 4. Verify clean ledger and metrics state after replace
+    ledger_count = db.query(OrderItemLedger).filter(OrderItemLedger.organization_id == org_id).count()
+    assert ledger_count == 2373
+
+    metrics_count = db.query(SKUMetric).filter(SKUMetric.organization_id == org_id).count()
+    assert metrics_count == 57
+
+    # 5. Verify overview dashboard endpoint returns complete numbers
+    resp_overview = client.get("/api/v1/dashboard/overview", headers=headers)
+    assert resp_overview.status_code == 200
+    ov = resp_overview.json()
+    assert ov["sales_value"] == 319328.0
+    assert ov["returned_value"] == 97967.0
+    assert ov["sale_events_count"] == 1734
+    assert ov["return_events_count"] == 486
+    assert ov["cancellation_events_count"] == 134
+    assert ov["unique_orders_count"] == 1752
+    assert ov["unique_skus_count"] == 57
+    assert ov["sale_linked_return_rate"] == 24.2

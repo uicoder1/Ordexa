@@ -62,8 +62,7 @@ class CalculationEngine:
             all_skus[p_sku_upper] = p_sku_norm
 
         # Clear existing metrics to maintain clean state
-        db.query(SKUMetric).filter(SKUMetric.organization_id == organization_id).delete()
-        db.commit()
+        db.query(SKUMetric).filter(SKUMetric.organization_id == organization_id).delete(synchronize_session=False)
 
         new_metrics = []
 
